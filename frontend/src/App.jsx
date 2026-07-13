@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
-import { checkDb, getTables, setupTables, seedSampleData } from './api';
+import { checkDb, getTables, getTableRows, setupTables, seedSampleData } from './api';
 import './App.css';
+
+function formatCell(value) {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
 
 function App() {
   const [dbCheck, setDbCheck] = useState({ status: 'idle', data: null, error: null });
   const [tables, setTables] = useState({ status: 'idle', data: null, error: null });
+  const [tableRows, setTableRows] = useState({ status: 'idle', tableName: null, data: null, error: null });
   const [setup, setSetup] = useState({ status: 'idle', data: null, error: null });
   const [seed, setSeed] = useState({ status: 'idle', data: null, error: null });
 
@@ -28,6 +35,16 @@ function App() {
     }
   };
 
+  const loadTableRows = async (tableName) => {
+    setTableRows({ status: 'loading', tableName, data: null, error: null });
+    try {
+      const data = await getTableRows(tableName);
+      setTableRows({ status: 'success', tableName, data, error: null });
+    } catch (err) {
+      setTableRows({ status: 'error', tableName, data: null, error: err.message });
+    }
+  };
+
   const handleSetupTables = async () => {
     setSetup({ status: 'loading', data: null, error: null });
     try {
@@ -45,6 +62,9 @@ function App() {
       const data = await seedSampleData();
       setSeed({ status: 'success', data, error: null });
       await loadTables();
+      if (tableRows.tableName) {
+        await loadTableRows(tableRows.tableName);
+      }
     } catch (err) {
       setSeed({ status: 'error', data: null, error: err.message });
     }
@@ -106,7 +126,7 @@ function App() {
         </div>
         <div className="card-body">
           {tables.status === 'idle' && (
-            <p className="muted">목록 불러오기 버튼을 누르세요.</p>
+            <p className="muted">목록 불러오기 버튼을 누르세요. 테이블을 클릭하면 행 데이터를 볼 수 있습니다.</p>
           )}
           {tables.status === 'loading' && <p className="muted">테이블 목록 불러오는 중…</p>}
           {tables.status === 'success' && tables.data && (
@@ -118,8 +138,17 @@ function App() {
                 <p className="muted">테이블이 없습니다.</p>
               ) : (
                 <ul className="table-list">
-                  {tables.data.tables.map((name) => (
-                    <li key={name}>{name}</li>
+                  {tables.data.tables.map((table) => (
+                    <li key={table.name}>
+                      <button
+                        type="button"
+                        className={`table-item${tableRows.tableName === table.name ? ' active' : ''}`}
+                        onClick={() => loadTableRows(table.name)}
+                      >
+                        <span className="table-item-name">{table.name}</span>
+                        <span className="table-item-count">{table.rowCount}행</span>
+                      </button>
+                    </li>
                   ))}
                 </ul>
               )}
@@ -133,6 +162,52 @@ function App() {
           )}
         </div>
       </section>
+
+      {tableRows.tableName && (
+        <section className="card">
+          <div className="card-header">
+            <h2>{tableRows.tableName} 데이터</h2>
+          </div>
+          <div className="card-body">
+            {tableRows.status === 'loading' && <p className="muted">행 데이터 불러오는 중…</p>}
+            {tableRows.status === 'error' && (
+              <div className="result error">
+                <span className="badge badge-error">오류</span>
+                <p>{tableRows.error}</p>
+              </div>
+            )}
+            {tableRows.status === 'success' && tableRows.data && (
+              <div className="result">
+                <p className="meta">총 {tableRows.data.rowCount}행</p>
+                {tableRows.data.rows.length === 0 ? (
+                  <p className="muted">데이터가 없습니다.</p>
+                ) : (
+                  <div className="data-table-wrap">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          {tableRows.data.columns.map((column) => (
+                            <th key={column}>{column}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tableRows.data.rows.map((row, index) => (
+                          <tr key={index}>
+                            {tableRows.data.columns.map((column) => (
+                              <td key={column}>{formatCell(row[column])}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="card">
         <div className="card-header">

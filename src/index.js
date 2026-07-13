@@ -5,6 +5,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const { createTables } = require('./db/schema');
 const { seedSampleData } = require('./db/sampleData');
+const { getTablesWithRowCounts, getTableRows } = require('./db/tableQuery');
 
 const app = express();
 const APP_PORT = parseInt(process.env.APP_PORT || '3000', 10);
@@ -57,12 +58,8 @@ app.get('/api/db/check', async (req, res) => {
 app.get('/api/db/tables', async (req, res) => {
   try {
     const connection = await getPool().getConnection();
-    const [rows] = await connection.execute(
-      'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? ORDER BY TABLE_NAME',
-      [dbConfig.database]
-    );
+    const tables = await getTablesWithRowCounts(connection, dbConfig.database);
     connection.release();
-    const tables = rows.map((row) => row.TABLE_NAME);
     res.status(200).json({
       ok: true,
       database: dbConfig.database,
@@ -73,6 +70,33 @@ app.get('/api/db/tables', async (req, res) => {
     res.status(503).json({
       ok: false,
       message: 'Failed to fetch table list',
+      error: err.message,
+      code: err.code || null,
+    });
+  }
+});
+
+app.get('/api/db/tables/:tableName/rows', async (req, res) => {
+  try {
+    const connection = await getPool().getConnection();
+    const result = await getTableRows(
+      connection,
+      dbConfig.database,
+      req.params.tableName,
+      req.query.limit,
+      req.query.offset
+    );
+    connection.release();
+    res.status(200).json({
+      ok: true,
+      database: dbConfig.database,
+      ...result,
+    });
+  } catch (err) {
+    const status = err.statusCode || 503;
+    res.status(status).json({
+      ok: false,
+      message: 'Failed to fetch table rows',
       error: err.message,
       code: err.code || null,
     });

@@ -17,6 +17,10 @@ export async function getTables() {
   return request('/db/tables');
 }
 
+export async function getTableRows(tableName) {
+  return request(`/db/tables/${encodeURIComponent(tableName)}/rows`);
+}
+
 export async function setupTables() {
   return request('/db/setup-tables', { method: 'POST' });
 }
