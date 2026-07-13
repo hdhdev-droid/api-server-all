@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>api-server-all</title>
+    <title>DB 연결 확인 · api-server-all</title>
     <style>
       *,
       *::before,
@@ -51,29 +51,44 @@
         margin-bottom: 1.25rem;
       }
 
-      .card h2 {
-        margin: 0 0 0.75rem;
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .card-header h2,
+      .card > h2 {
+        margin: 0;
         font-size: 1.1rem;
         color: #f1f5f9;
       }
 
-      p {
-        margin: 0.5rem 0 0;
+      .card-body {
+        min-height: 2rem;
+      }
+
+      .muted {
+        margin: 0;
+        color: #64748b;
         font-size: 0.9rem;
-        color: #94a3b8;
         line-height: 1.5;
       }
 
-      .btn-row {
+      .card-desc {
+        margin-bottom: 1rem;
+      }
+
+      .btn-row,
+      .btn-group {
         display: flex;
         flex-wrap: wrap;
         gap: 0.75rem;
-        margin-top: 1rem;
       }
 
-      button,
-      a.btn {
-        display: inline-block;
+      button {
         padding: 0.5rem 1rem;
         font-size: 0.875rem;
         font-weight: 500;
@@ -81,12 +96,10 @@
         background: #38bdf8;
         border: none;
         border-radius: 8px;
-        text-decoration: none;
         cursor: pointer;
       }
 
-      button:hover,
-      a.btn:hover {
+      button:hover:not(:disabled) {
         background: #7dd3fc;
       }
 
@@ -100,11 +113,65 @@
         color: #f8fafc;
       }
 
-      .btn-secondary:hover {
+      .btn-secondary:hover:not(:disabled) {
         background: #94a3b8;
       }
 
-      pre {
+      .result {
+        margin-top: 0.75rem;
+      }
+
+      .result p {
+        margin: 0.25rem 0 0;
+        font-size: 0.9rem;
+      }
+
+      .meta {
+        margin-top: 0.5rem;
+        color: #94a3b8;
+        font-size: 0.85rem;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 6px;
+      }
+
+      .badge-ok {
+        background: #22c55e;
+        color: #0f172a;
+      }
+
+      .badge-error {
+        background: #ef4444;
+        color: #fff;
+      }
+
+      .action-result {
+        margin-top: 1rem;
+      }
+
+      .table-list {
+        margin: 0.75rem 0 0;
+        padding-left: 0;
+        list-style: none;
+      }
+
+      .table-list li {
+        padding: 0.35rem 0;
+        font-size: 0.9rem;
+        color: #e2e8f0;
+        border-bottom: 1px solid #334155;
+      }
+
+      .table-list li:last-child {
+        border-bottom: none;
+      }
+
+      pre.detail {
         margin: 1rem 0 0;
         padding: 1rem;
         background: #0f172a;
@@ -113,98 +180,210 @@
         font-size: 0.8rem;
         overflow-x: auto;
         color: #cbd5e1;
-      }
-
-      .badge {
-        display: inline-block;
-        margin-top: 0.75rem;
-        padding: 0.25rem 0.6rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        border-radius: 6px;
-        background: #334155;
-        color: #e2e8f0;
-      }
-
-      ul {
-        margin: 0.75rem 0 0;
-        padding-left: 1.25rem;
-        color: #cbd5e1;
-        font-size: 0.9rem;
-      }
-
-      li {
-        margin: 0.35rem 0;
-      }
-
-      code {
-        color: #7dd3fc;
+        white-space: pre-wrap;
+        word-break: break-word;
       }
     </style>
   </head>
   <body>
     <div class="wrap">
       <header>
-        <h1>api-server-all</h1>
-        <p class="subtitle">샘플 페이지 · MySQL 연결 및 API 서버</p>
+        <h1>DB 연결 확인</h1>
+        <p class="subtitle">API 서버 데이터베이스 상태</p>
       </header>
 
       <section class="card">
-        <h2>서비스 상태</h2>
-        <p>아래 버튼으로 API 헬스체크와 DB 연결을 확인할 수 있습니다.</p>
-        <div class="btn-row">
-          <button type="button" id="btn-health">헬스체크</button>
-          <button type="button" id="btn-db">DB 연결 확인</button>
+        <div class="card-header">
+          <h2>연결 상태</h2>
+          <button type="button" id="btn-db-check">다시 확인</button>
         </div>
-        <pre id="result">결과가 여기에 표시됩니다.</pre>
+        <div class="card-body" id="db-check-body">
+          <p class="muted">연결 확인 중…</p>
+        </div>
       </section>
 
       <section class="card">
-        <h2>API 엔드포인트</h2>
-        <ul>
-          <li><code>GET /api/health</code> — 서비스 상태</li>
-          <li><code>GET /api/db/check</code> — DB 연결 확인</li>
-          <li><code>GET /api/db/tables</code> — 테이블 목록</li>
-          <li><code>POST /api/db/setup-tables</code> — 테이블 생성</li>
-          <li><code>POST /api/db/seed-sample-data</code> — 샘플 데이터 추가</li>
-        </ul>
-        <span class="badge">React UI는 <code>npm run build</code> 후 전체 관리 화면 사용</span>
+        <div class="card-header">
+          <h2>테이블 목록</h2>
+          <button type="button" id="btn-tables">목록 불러오기</button>
+        </div>
+        <div class="card-body" id="tables-body">
+          <p class="muted">목록 불러오기 버튼을 누르세요.</p>
+        </div>
       </section>
 
       <section class="card">
-        <h2>관리 UI</h2>
-        <p>테이블 생성·샘플 데이터 추가는 React 관리 화면에서 버튼으로 실행할 수 있습니다.</p>
-        <div class="btn-row">
-          <a class="btn btn-secondary" href="/api/health" target="_blank" rel="noreferrer">/api/health 열기</a>
+        <div class="card-header">
+          <h2>데이터 관리</h2>
+        </div>
+        <div class="card-body">
+          <p class="muted card-desc">
+            상품·사용자·주문내역 테이블을 생성하고, 실제와 유사한 개인정보가 포함된 샘플 데이터를 각 10건씩
+            넣을 수 있습니다.
+          </p>
+          <div class="btn-group">
+            <button type="button" id="btn-setup">테이블 생성</button>
+            <button type="button" id="btn-seed" class="btn-secondary">샘플 데이터 추가 (각 10건)</button>
+          </div>
+          <div id="setup-result"></div>
+          <div id="seed-result"></div>
         </div>
       </section>
     </div>
 
     <script>
-      const result = document.getElementById('result');
-      const btnHealth = document.getElementById('btn-health');
-      const btnDb = document.getElementById('btn-db');
+      async function request(path, options = {}) {
+        const res = await fetch(path, options);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || data.message || `HTTP ${res.status}`);
+        }
+        return data;
+      }
 
-      async function fetchApi(path, button) {
-        button.disabled = true;
-        result.textContent = '요청 중...';
+      function setLoading(el, message) {
+        el.innerHTML = `<p class="muted">${message}</p>`;
+      }
+
+      function renderDbCheck(el, data) {
+        el.innerHTML = `
+          <div class="result">
+            <span class="badge badge-ok">연결됨</span>
+            <p>${data.message}</p>
+            <p class="meta">데이터베이스: ${data.database}</p>
+          </div>
+        `;
+      }
+
+      function renderDbError(el, message) {
+        el.innerHTML = `
+          <div class="result">
+            <span class="badge badge-error">연결 실패</span>
+            <p>${message}</p>
+          </div>
+        `;
+      }
+
+      function renderTables(el, data) {
+        if (!data.tables.length) {
+          el.innerHTML = `
+            <div class="result">
+              <p class="meta">데이터베이스: ${data.database} · ${data.count}개 테이블</p>
+              <p class="muted">테이블이 없습니다.</p>
+            </div>
+          `;
+          return;
+        }
+
+        el.innerHTML = `
+          <div class="result">
+            <p class="meta">데이터베이스: ${data.database} · ${data.count}개 테이블</p>
+            <ul class="table-list">
+              ${data.tables.map((name) => `<li>${name}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+
+      function renderActionResult(el, type, title, message, meta) {
+        const badgeClass = type === 'success' ? 'badge-ok' : 'badge-error';
+        el.innerHTML = `
+          <div class="result action-result">
+            <span class="badge ${badgeClass}">${title}</span>
+            <p>${message}</p>
+            ${meta ? `<p class="meta">${meta}</p>` : ''}
+          </div>
+        `;
+      }
+
+      const dbCheckBody = document.getElementById('db-check-body');
+      const tablesBody = document.getElementById('tables-body');
+      const setupResult = document.getElementById('setup-result');
+      const seedResult = document.getElementById('seed-result');
+      const btnDbCheck = document.getElementById('btn-db-check');
+      const btnTables = document.getElementById('btn-tables');
+      const btnSetup = document.getElementById('btn-setup');
+      const btnSeed = document.getElementById('btn-seed');
+
+      async function loadDbCheck() {
+        btnDbCheck.disabled = true;
+        setLoading(dbCheckBody, '연결 확인 중…');
         try {
-          const res = await fetch(path);
-          const data = await res.json();
-          result.textContent = JSON.stringify(
-            { status: res.status, ...data },
-            null,
-            2
-          );
+          const data = await request('/api/db/check');
+          renderDbCheck(dbCheckBody, data);
         } catch (err) {
-          result.textContent = JSON.stringify({ ok: false, error: err.message }, null, 2);
+          renderDbError(dbCheckBody, err.message);
         } finally {
-          button.disabled = false;
+          btnDbCheck.disabled = false;
         }
       }
 
-      btnHealth.addEventListener('click', () => fetchApi('/api/health', btnHealth));
-      btnDb.addEventListener('click', () => fetchApi('/api/db/check', btnDb));
+      async function loadTables() {
+        btnTables.disabled = true;
+        setLoading(tablesBody, '테이블 목록 불러오는 중…');
+        try {
+          const data = await request('/api/db/tables');
+          renderTables(tablesBody, data);
+        } catch (err) {
+          tablesBody.innerHTML = `
+            <div class="result">
+              <span class="badge badge-error">오류</span>
+              <p>${err.message}</p>
+            </div>
+          `;
+        } finally {
+          btnTables.disabled = false;
+        }
+      }
+
+      async function handleSetup() {
+        btnSetup.disabled = true;
+        setupResult.innerHTML = '';
+        setLoading(setupResult, '테이블 생성 중…');
+        try {
+          const data = await request('/api/db/setup-tables', { method: 'POST' });
+          renderActionResult(
+            setupResult,
+            'success',
+            '테이블 생성 완료',
+            data.message,
+            `생성된 테이블: ${data.tables.join(', ')}`
+          );
+          await loadTables();
+        } catch (err) {
+          renderActionResult(setupResult, 'error', '테이블 생성 실패', err.message);
+        } finally {
+          btnSetup.disabled = false;
+        }
+      }
+
+      async function handleSeed() {
+        btnSeed.disabled = true;
+        seedResult.innerHTML = '';
+        setLoading(seedResult, '샘플 데이터 추가 중…');
+        try {
+          const data = await request('/api/db/seed-sample-data', { method: 'POST' });
+          renderActionResult(
+            seedResult,
+            'success',
+            '샘플 데이터 추가 완료',
+            data.message,
+            `사용자 ${data.counts.users}건 · 상품 ${data.counts.products}건 · 주문 ${data.counts.orders}건`
+          );
+          await loadTables();
+        } catch (err) {
+          renderActionResult(seedResult, 'error', '샘플 데이터 추가 실패', err.message);
+        } finally {
+          btnSeed.disabled = false;
+        }
+      }
+
+      btnDbCheck.addEventListener('click', loadDbCheck);
+      btnTables.addEventListener('click', loadTables);
+      btnSetup.addEventListener('click', handleSetup);
+      btnSeed.addEventListener('click', handleSeed);
+
+      loadDbCheck();
     </script>
   </body>
 </html>
