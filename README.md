@@ -34,7 +34,8 @@ React(Vite)로 만든 **관리용 웹 화면**이 선택적으로 포함되어 �
 
 | 변수 | 설명 |
 |------|------|
-| `PORT` | HTTP 서버 포트 (기본값: `3000`) |
+| `APP_PORT` | API 서버 HTTP 포트 (기본값: `3000`) |
+| `WEB_PORT` | Vite 개발 서버 포트 (기본값: `5173`) |
 | `DB_HOST` | MySQL 호스트 |
 | `DB_PORT` | MySQL 포트 (기본값: `3306`) |
 | `DB_USER` | DB 사용자 |
@@ -80,7 +81,7 @@ npm install
 npm run dev
 ```
 
-Vite는 `/api` 요청을 `http://localhost:3000`으로 프록시합니다. 브라우저는 보통 `http://localhost:5173`에서 접속합니다.
+Vite는 `/api` 요청을 `APP_PORT`로 프록시합니다. 브라우저는 `WEB_PORT`(기본 `5173`)에서 접속합니다.
 
 ### 한 프로세스로 UI + API (프로덕션에 가깝게)
 

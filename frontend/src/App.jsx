@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { checkDb, getTables } from './api';
+import { checkDb, getTables, setupTables, seedSampleData } from './api';
 import './App.css';
 
 function App() {
   const [dbCheck, setDbCheck] = useState({ status: 'idle', data: null, error: null });
   const [tables, setTables] = useState({ status: 'idle', data: null, error: null });
+  const [setup, setSetup] = useState({ status: 'idle', data: null, error: null });
+  const [seed, setSeed] = useState({ status: 'idle', data: null, error: null });
 
   const loadDbCheck = async () => {
     setDbCheck({ status: 'loading', data: null, error: null });
@@ -23,6 +25,28 @@ function App() {
       setTables({ status: 'success', data, error: null });
     } catch (err) {
       setTables({ status: 'error', data: null, error: err.message });
+    }
+  };
+
+  const handleSetupTables = async () => {
+    setSetup({ status: 'loading', data: null, error: null });
+    try {
+      const data = await setupTables();
+      setSetup({ status: 'success', data, error: null });
+      await loadTables();
+    } catch (err) {
+      setSetup({ status: 'error', data: null, error: err.message });
+    }
+  };
+
+  const handleSeedSampleData = async () => {
+    setSeed({ status: 'loading', data: null, error: null });
+    try {
+      const data = await seedSampleData();
+      setSeed({ status: 'success', data, error: null });
+      await loadTables();
+    } catch (err) {
+      setSeed({ status: 'error', data: null, error: err.message });
     }
   };
 
@@ -105,6 +129,67 @@ function App() {
             <div className="result error">
               <span className="badge badge-error">오류</span>
               <p>{tables.error}</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-header">
+          <h2>데이터 관리</h2>
+        </div>
+        <div className="card-body">
+          <p className="muted card-desc">
+            상품·사용자·주문내역 테이블을 생성하고, 실제와 유사한 개인정보가 포함된 샘플 데이터를 각 10건씩
+            넣을 수 있습니다.
+          </p>
+          <div className="btn-group">
+            <button
+              type="button"
+              className="btn"
+              onClick={handleSetupTables}
+              disabled={setup.status === 'loading'}
+            >
+              {setup.status === 'loading' ? '생성 중…' : '테이블 생성'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleSeedSampleData}
+              disabled={seed.status === 'loading'}
+            >
+              {seed.status === 'loading' ? '추가 중…' : '샘플 데이터 추가 (각 10건)'}
+            </button>
+          </div>
+
+          {setup.status === 'success' && setup.data && (
+            <div className="result success action-result">
+              <span className="badge badge-ok">테이블 생성 완료</span>
+              <p>{setup.data.message}</p>
+              <p className="meta">생성된 테이블: {setup.data.tables.join(', ')}</p>
+            </div>
+          )}
+          {setup.status === 'error' && (
+            <div className="result error action-result">
+              <span className="badge badge-error">테이블 생성 실패</span>
+              <p>{setup.error}</p>
+            </div>
+          )}
+
+          {seed.status === 'success' && seed.data && (
+            <div className="result success action-result">
+              <span className="badge badge-ok">샘플 데이터 추가 완료</span>
+              <p>{seed.data.message}</p>
+              <p className="meta">
+                사용자 {seed.data.counts.users}건 · 상품 {seed.data.counts.products}건 · 주문{' '}
+                {seed.data.counts.orders}건
+              </p>
+            </div>
+          )}
+          {seed.status === 'error' && (
+            <div className="result error action-result">
+              <span className="badge badge-error">샘플 데이터 추가 실패</span>
+              <p>{seed.error}</p>
             </div>
           )}
         </div>

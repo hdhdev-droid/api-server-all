@@ -3,9 +3,11 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const fs = require('fs');
 const express = require('express');
 const mysql = require('mysql2/promise');
+const { createTables } = require('./db/schema');
+const { seedSampleData } = require('./db/sampleData');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const APP_PORT = parseInt(process.env.APP_PORT || '3000', 10);
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 
 const dbConfig = {
@@ -80,6 +82,48 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ ok: true, service: 'api-server-all' });
 });
 
+app.post('/api/db/setup-tables', async (req, res) => {
+  try {
+    const connection = await getPool().getConnection();
+    const tables = await createTables(connection);
+    connection.release();
+    res.status(200).json({
+      ok: true,
+      message: 'Tables created successfully',
+      database: dbConfig.database,
+      tables,
+    });
+  } catch (err) {
+    res.status(503).json({
+      ok: false,
+      message: 'Failed to create tables',
+      error: err.message,
+      code: err.code || null,
+    });
+  }
+});
+
+app.post('/api/db/seed-sample-data', async (req, res) => {
+  try {
+    const connection = await getPool().getConnection();
+    const counts = await seedSampleData(connection);
+    connection.release();
+    res.status(200).json({
+      ok: true,
+      message: 'Sample data inserted successfully',
+      database: dbConfig.database,
+      counts,
+    });
+  } catch (err) {
+    res.status(503).json({
+      ok: false,
+      message: 'Failed to insert sample data',
+      error: err.message,
+      code: err.code || null,
+    });
+  }
+});
+
 // 빌드된 React 앱 정적 서빙 (빌드 후 /api 가 아닌 요청은 프론트엔드로)
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
@@ -92,7 +136,7 @@ if (fs.existsSync(frontendDist)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+app.listen(APP_PORT, () => {
+  console.log(`Server running at http://localhost:${APP_PORT}`);
   console.log(`DB: ${dbConfig.host}:${dbConfig.port} / ${dbConfig.database} (user: ${dbConfig.user})`);
 });
