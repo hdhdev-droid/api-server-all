@@ -9,6 +9,7 @@ const { seedSampleData } = require('./db/sampleData');
 const app = express();
 const APP_PORT = parseInt(process.env.APP_PORT || '3000', 10);
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
+const samplePublic = path.join(__dirname, '..', 'public');
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
@@ -129,6 +130,11 @@ if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
   app.get('*', (req, res) => {
     res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+} else if (fs.existsSync(path.join(samplePublic, 'index.html'))) {
+  app.use(express.static(samplePublic));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(samplePublic, 'index.html'));
   });
 } else {
   app.use((req, res) => {
