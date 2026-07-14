@@ -150,6 +150,62 @@
         color: #fff;
       }
 
+      .badge-pii {
+        background: #f59e0b;
+        color: #0f172a;
+      }
+
+      .badge-safe {
+        background: #22c55e;
+        color: #0f172a;
+      }
+
+      .btn-pii {
+        background: #f59e0b;
+        color: #0f172a;
+      }
+
+      .btn-pii:hover:not(:disabled) {
+        background: #fbbf24;
+      }
+
+      .btn-safe {
+        background: #22c55e;
+        color: #0f172a;
+      }
+
+      .btn-safe:hover:not(:disabled) {
+        background: #4ade80;
+      }
+
+      .seed-group {
+        margin-top: 0.75rem;
+      }
+
+      .table-group {
+        margin-top: 1rem;
+      }
+
+      .table-group-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.35rem;
+      }
+
+      .table-item-main {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        min-width: 0;
+      }
+
+      .table-item-desc {
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 400;
+      }
+
       .action-result {
         margin-top: 1rem;
       }
@@ -172,6 +228,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 1rem;
         width: 100%;
         padding: 0.6rem 0.25rem;
         font-size: 0.9rem;
@@ -273,7 +330,7 @@
           <button type="button" id="btn-tables">목록 불러오기</button>
         </div>
         <div class="card-body" id="tables-body">
-          <p class="muted">목록 불러오기 버튼을 누르세요. 테이블을 클릭하면 행 데이터를 볼 수 있습니다.</p>
+          <p class="muted">목록 불러오기 버튼을 누르세요. 개인정보 여부로 구분되며, 테이블을 클릭하면 행 데이터를 볼 수 있습니다.</p>
         </div>
       </section>
 
@@ -290,12 +347,16 @@
         </div>
         <div class="card-body">
           <p class="muted card-desc">
-            상품·사용자·주문내역 테이블을 생성하고, 실제와 유사한 개인정보가 포함된 샘플 데이터를 각 10건씩
-            넣을 수 있습니다.
+            개인정보/비개인정보 테이블, FK 관계, 이상 컬럼명 개인정보 테이블
+            (cust_shadow_bag, id_scrap_bin, reach_out_pad)을 생성·누적합니다.
           </p>
           <div class="btn-group">
             <button type="button" id="btn-setup">테이블 생성</button>
-            <button type="button" id="btn-seed" class="btn-secondary">샘플 데이터 추가 (각 10건)</button>
+          </div>
+          <div class="btn-group seed-group">
+            <button type="button" id="btn-seed-personal" class="btn-pii">개인정보 샘플 추가</button>
+            <button type="button" id="btn-seed-non-personal" class="btn-safe">비개인정보 샘플 추가</button>
+            <button type="button" id="btn-seed-all" class="btn-secondary">전체 샘플 추가</button>
           </div>
           <div id="setup-result"></div>
           <div id="seed-result"></div>
@@ -342,6 +403,43 @@
         return String(value);
       }
 
+      function renderTableGroup(title, badgeClass, tables, selectedTableName) {
+        if (!tables?.length) return '';
+        return `
+          <div class="table-group">
+            <div class="table-group-title">
+              <span class="badge ${badgeClass}">${title}</span>
+              <span class="meta">${tables.length}개</span>
+            </div>
+            <ul class="table-list">
+              ${tables
+                .map(
+                  (table) => `
+                <li>
+                  <button
+                    type="button"
+                    class="table-item${selectedTableName === table.name ? ' active' : ''}"
+                    data-table-name="${table.name}"
+                  >
+                    <span class="table-item-main">
+                      <span class="table-item-name">${table.name}</span>
+                      ${
+                        table.description
+                          ? `<span class="table-item-desc">${table.description}</span>`
+                          : ''
+                      }
+                    </span>
+                    <span class="table-item-count">${table.rowCount}행</span>
+                  </button>
+                </li>
+              `
+                )
+                .join('')}
+            </ul>
+          </div>
+        `;
+      }
+
       function renderTables(el, data, selectedTableName) {
         if (!data.tables.length) {
           el.innerHTML = `
@@ -353,27 +451,17 @@
           return;
         }
 
+        const groups = data.groups || {};
         el.innerHTML = `
           <div class="result">
-            <p class="meta">데이터베이스: ${data.database} · ${data.count}개 테이블</p>
-            <ul class="table-list">
-              ${data.tables
-                .map(
-                  (table) => `
-                <li>
-                  <button
-                    type="button"
-                    class="table-item${selectedTableName === table.name ? ' active' : ''}"
-                    data-table-name="${table.name}"
-                  >
-                    <span class="table-item-name">${table.name}</span>
-                    <span class="table-item-count">${table.rowCount}행</span>
-                  </button>
-                </li>
-              `
-                )
-                .join('')}
-            </ul>
+            <p class="meta">
+              데이터베이스: ${data.database} · ${data.count}개 테이블 ·
+              개인정보 ${groups.withPersonalInfo?.length || 0} ·
+              비개인정보 ${groups.withoutPersonalInfo?.length || 0}
+            </p>
+            ${renderTableGroup('개인정보 포함', 'badge-pii', groups.withPersonalInfo, selectedTableName)}
+            ${renderTableGroup('개인정보 없음', 'badge-safe', groups.withoutPersonalInfo, selectedTableName)}
+            ${renderTableGroup('미분류', 'badge', groups.unclassified, selectedTableName)}
           </div>
         `;
 
@@ -445,7 +533,10 @@
       const btnDbCheck = document.getElementById('btn-db-check');
       const btnTables = document.getElementById('btn-tables');
       const btnSetup = document.getElementById('btn-setup');
-      const btnSeed = document.getElementById('btn-seed');
+      const btnSeedPersonal = document.getElementById('btn-seed-personal');
+      const btnSeedNonPersonal = document.getElementById('btn-seed-non-personal');
+      const btnSeedAll = document.getElementById('btn-seed-all');
+      const seedButtons = [btnSeedPersonal, btnSeedNonPersonal, btnSeedAll];
       let selectedTableName = null;
       let latestTablesData = null;
 
@@ -511,12 +602,15 @@
         setLoading(setupResult, '테이블 생성 중…');
         try {
           const data = await request('/api/db/setup-tables', { method: 'POST' });
+          const names = (data.tables || [])
+            .map((table) => (typeof table === 'string' ? table : table.name))
+            .join(', ');
           renderActionResult(
             setupResult,
             'success',
             '테이블 생성 완료',
             data.message,
-            `생성된 테이블: ${data.tables.join(', ')}`
+            `생성된 테이블: ${names}`
           );
           await loadTables();
         } catch (err) {
@@ -526,18 +620,31 @@
         }
       }
 
-      async function handleSeed() {
-        btnSeed.disabled = true;
+      async function handleSeed(scope) {
+        seedButtons.forEach((btn) => {
+          btn.disabled = true;
+        });
         seedResult.innerHTML = '';
         setLoading(seedResult, '샘플 데이터 추가 중…');
         try {
-          const data = await request('/api/db/seed-sample-data', { method: 'POST' });
+          const query = scope === 'all' ? '' : `?scope=${encodeURIComponent(scope)}`;
+          const data = await request(`/api/db/seed-sample-data${query}`, { method: 'POST' });
+          const added = data.counts?.added || {};
+          const totals = data.counts?.totals || {};
+          const addedText =
+            Object.entries(added)
+              .filter(([, value]) => value > 0)
+              .map(([key, value]) => `${key} ${value}`)
+              .join(' · ') || '없음';
+          const totalsText = Object.entries(totals)
+            .map(([key, value]) => `${key} ${value}`)
+            .join(' · ');
           renderActionResult(
             seedResult,
             'success',
             '샘플 데이터 추가 완료',
-            data.message,
-            `사용자 ${data.counts.users}건 · 상품 ${data.counts.products}건 · 주문 ${data.counts.orders}건`
+            `${data.message} (scope: ${data.counts?.scope || scope})`,
+            `이번 추가: ${addedText} / 현재 합계: ${totalsText}`
           );
           await loadTables();
           if (selectedTableName) {
@@ -546,14 +653,18 @@
         } catch (err) {
           renderActionResult(seedResult, 'error', '샘플 데이터 추가 실패', err.message);
         } finally {
-          btnSeed.disabled = false;
+          seedButtons.forEach((btn) => {
+            btn.disabled = false;
+          });
         }
       }
 
       btnDbCheck.addEventListener('click', loadDbCheck);
       btnTables.addEventListener('click', loadTables);
       btnSetup.addEventListener('click', handleSetup);
-      btnSeed.addEventListener('click', handleSeed);
+      btnSeedPersonal.addEventListener('click', () => handleSeed('personal'));
+      btnSeedNonPersonal.addEventListener('click', () => handleSeed('non_personal'));
+      btnSeedAll.addEventListener('click', () => handleSeed('all'));
 
       loadDbCheck();
     </script>

@@ -55,37 +55,74 @@ React(Vite)로 만든 **관리용 웹 화면**이 포함되어 있으며, 프론
 | `GET` | `/api/health` | 서비스 기동 여부 확인 |
 | `GET` | `/api/db/check` | DB 연결 성공 여부 (`ping`) |
 | `GET` | `/api/db/tables` | 현재 `DB_NAME` 스키마의 테이블 이름 목록 |
-| `POST` | `/api/db/setup-tables` | `users`, `products`, `orders` 테이블 생성 |
-| `POST` | `/api/db/seed-sample-data` | 샘플 데이터 삽입 (사용자·상품·주문 각 10건) |
+| `POST` | `/api/db/setup-tables` | 예시 테이블 생성 (FK·이상 컬럼명 개인정보 테이블 포함) |
+| `POST` | `/api/db/seed-sample-data` | 샘플 데이터 누적 삽입 (`?scope=all\|personal\|non_personal`) |
 
 연결 실패 시 HTTP 상태는 주로 `503`이며, 응답에 `error`, `code`(해당 시)가 포함될 수 있습니다.
 
-### 생성되는 테이블
+### 생성되는 테이블과 관계
 
-| 테이블 | 설명 |
-|--------|------|
-| `users` | 이름, 이메일, 전화번호, 주소, 생년월일 |
-| `products` | 상품명, 설명, 가격, 카테고리, 재고 |
-| `orders` | 사용자·상품 FK, 수량, 금액, 주문 상태, 배송지, 수령인 정보 |
+```text
+brands ──────────────┐
+categories ──┐       │
+warehouses   │       ▼
+             │   products ◄──── inventory
+             └── product_categories
+coupons (독립)
+
+users ── addresses
+  │
+  ├── orders ── order_items ──► products
+  │      │
+  │      ├── payments
+  │      └── shipments
+  ├── reviews ──► products
+  ├── cust_shadow_bag   (이상한 컬럼명의 개인정보)
+  ├── id_scrap_bin      (이상한 컬럼명의 신원정보)
+  └── reach_out_pad     (이상한 컬럼명의 연락처)
+```
+
+| 테이블 | 개인정보 | 관계 / 설명 |
+|--------|----------|-------------|
+| `brands` | 없음 | 브랜드 마스터 |
+| `categories` | 없음 | 카테고리 |
+| `warehouses` | 없음 | 물류 창고 |
+| `products` | 없음 | `brands` 참조 |
+| `product_categories` | 없음 | `products` ↔ `categories` N:M |
+| `inventory` | 없음 | `products` + `warehouses` |
+| `coupons` | 없음 | 쿠폰 정책 |
+| `users` | 있음 | 고객 개인정보 |
+| `addresses` | 있음 | `users` 참조 배송지 |
+| `orders` | 있음 | `users` + `products` 참조 |
+| `order_items` | 없음 | `orders` + `products` 라인 |
+| `payments` | 있음 | `orders` 참조, 결제자명 |
+| `shipments` | 있음 | `orders` 참조, 수령인 정보 |
+| `reviews` | 있음 | `users` + `products` 참조 |
+| `cust_shadow_bag` | 있음 | 이상 컬럼명 (`aka_label`, `digi_mailbox`, `ring_signal` …) |
+| `id_scrap_bin` | 있음 | 이상 컬럼명 (`face_tag`, `citizen_fake_no`, `wallet_tail` …) |
+| `reach_out_pad` | 있음 | 이상 컬럼명 (`who_is_it`, `ping_me`, `shout_code` …) |
 
 ### 샘플 데이터
 
-`POST /api/db/seed-sample-data` 호출 시 아래 데이터가 각 **10건**씩 삽입됩니다.
+`POST /api/db/seed-sample-data` 로 데이터를 **누적** 삽입합니다. `scope` 쿼리로 구분해 넣을 수 있습니다.
 
-- **사용자**: 한국 이름, 이메일, `010-XXXX-XXXX` 형식 전화번호, 실제 주소 형식, 생년월일
-- **상품**: 전자기기·의류·식품 등 10종
-- **주문**: 사용자·상품 연결, 배송지·수령인·연락처 포함
+| scope | 설명 |
+|-------|------|
+| `all` (기본) | 개인정보 + 비개인정보 전부 |
+| `personal` | `users`, `addresses`, `orders`, `payments`, `shipments`, `reviews`, `cust_shadow_bag`, `id_scrap_bin`, `reach_out_pad` 등 |
+| `non_personal` | `brands`, `categories`, `warehouses`, `products`, `product_categories`, `inventory`, `coupons` |
 
-재실행 시 기존 3개 테이블의 데이터를 비운 뒤 다시 10건씩 넣습니다. **테이블 생성을 먼저 실행**해야 합니다.
+버튼을 누를 때마다 대상 테이블에 **각 10건 전후씩 누적**됩니다. 기존 데이터는 삭제되지 않습니다. **테이블 생성을 먼저 실행**해야 합니다.
 
 ---
 
 ## 웹 UI 사용 방법
 
 1. DB 연결 상태 확인
-2. **테이블 생성** 버튼 클릭 → `users`, `products`, `orders` 생성
-3. **샘플 데이터 추가 (각 10건)** 버튼 클릭 → 샘플 데이터 삽입
-4. **목록 불러오기**로 테이블 목록 갱신
+2. **테이블 생성** 버튼 클릭 → 예시 테이블 14개 생성
+3. **개인정보/비개인정보/전체 샘플 추가** 버튼으로 구분 삽입
+4. **목록 불러오기**로 개인정보 포함/없음 그룹과 행 수 확인
+5. 테이블 클릭으로 실제 행 데이터 확인
 
 ---
 

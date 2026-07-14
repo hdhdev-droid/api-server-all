@@ -1,3 +1,5 @@
+const { getTableMeta, TABLE_DEFINITIONS } = require('./schema');
+
 const TABLE_NAME_PATTERN = /^[a-zA-Z0-9_]+$/;
 
 async function getTableNames(connection, database) {
@@ -31,13 +33,32 @@ async function getTablesWithRowCounts(connection, database) {
 
   for (const name of tableNames) {
     const [countRows] = await connection.query(`SELECT COUNT(*) AS rowCount FROM \`${name}\``);
+    const meta = getTableMeta(name);
     tables.push({
       name,
       rowCount: Number(countRows[0].rowCount),
+      hasPersonalInfo: meta.hasPersonalInfo,
+      description: meta.description,
     });
   }
 
-  return tables;
+  const withPersonalInfo = tables.filter((table) => table.hasPersonalInfo === true);
+  const withoutPersonalInfo = tables.filter((table) => table.hasPersonalInfo === false);
+  const unclassified = tables.filter((table) => table.hasPersonalInfo === null);
+
+  return {
+    tables,
+    groups: {
+      withPersonalInfo,
+      withoutPersonalInfo,
+      unclassified,
+    },
+    definitions: TABLE_DEFINITIONS.map(({ name, hasPersonalInfo, description }) => ({
+      name,
+      hasPersonalInfo,
+      description,
+    })),
+  };
 }
 
 async function getTableRows(connection, database, tableName, limit = 100, offset = 0) {

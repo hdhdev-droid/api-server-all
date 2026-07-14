@@ -58,13 +58,15 @@ app.get('/api/db/check', async (req, res) => {
 app.get('/api/db/tables', async (req, res) => {
   try {
     const connection = await getPool().getConnection();
-    const tables = await getTablesWithRowCounts(connection, dbConfig.database);
+    const result = await getTablesWithRowCounts(connection, dbConfig.database);
     connection.release();
     res.status(200).json({
       ok: true,
       database: dbConfig.database,
-      count: tables.length,
-      tables,
+      count: result.tables.length,
+      tables: result.tables,
+      groups: result.groups,
+      definitions: result.definitions,
     });
   } catch (err) {
     res.status(503).json({
@@ -130,8 +132,9 @@ app.post('/api/db/setup-tables', async (req, res) => {
 
 app.post('/api/db/seed-sample-data', async (req, res) => {
   try {
+    const scope = req.query.scope || req.body?.scope || 'all';
     const connection = await getPool().getConnection();
-    const counts = await seedSampleData(connection);
+    const counts = await seedSampleData(connection, scope);
     connection.release();
     res.status(200).json({
       ok: true,
@@ -140,7 +143,8 @@ app.post('/api/db/seed-sample-data', async (req, res) => {
       counts,
     });
   } catch (err) {
-    res.status(503).json({
+    const status = err.statusCode || 503;
+    res.status(status).json({
       ok: false,
       message: 'Failed to insert sample data',
       error: err.message,

@@ -25,6 +25,7 @@ export async function setupTables() {
   return request('/db/setup-tables', { method: 'POST' });
 }
 
-export async function seedSampleData() {
-  return request('/db/seed-sample-data', { method: 'POST' });
+export async function seedSampleData(scope = 'all') {
+  const query = scope && scope !== 'all' ? `?scope=${encodeURIComponent(scope)}` : '';
+  return request(`/db/seed-sample-data${query}`, { method: 'POST' });
 }
